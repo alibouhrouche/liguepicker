@@ -1,0 +1,369 @@
+import { AnimatePresence, animate, m } from "framer-motion";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { fromURL, toURL } from "./convertURL";
+import { useGlobalContext } from "../GlobalContext";
+import { css } from "@emotion/css";
+import Shuffle from "../../components/Shuffle";
+import { shuffle } from "./shuffle";
+// import { SuccessIcon } from "../../components/SuccessIcon";
+
+const tableClass = css`
+td {
+    padding: 0;
+    text-align: center;
+}
+th {
+    text-align: center;
+    border: 1px solid;
+}
+`
+
+const tdClass = css`
+    height: 5rem;
+    width: 2rem;
+    padding: 0;
+    margin: 0;
+`
+
+const cellStyle = css`
+    padding: 1rem;
+    cursor: pointer;
+    text-align: center;
+    /* background: var(--cell); */
+`
+
+type CellProps = {
+    l: number,
+    r: number
+}
+
+// const resClass = css`
+//     border: 1px solid #cccccc;
+//     border-radius: 5px;
+//     height: 80px;
+//     padding: 20px;
+//     display: none;
+//     text-align: center;
+//     font-size: 30px;
+//     overflow: hidden;
+//     ul {
+//         margin: 50px 0 0 0;
+//         padding: 0;
+//         list-style: none;
+//     }
+//     li {
+//         margin-top: 20px;
+//     }
+// `
+
+const CellsCtx = createContext<{
+    curr: number,
+    setCurr: React.Dispatch<React.SetStateAction<number>>,
+    data: Record<string, number>
+    setData: React.Dispatch<React.SetStateAction<Record<string, number>>>
+    list: string[]
+    remaining: string[]
+    setRemaining: React.Dispatch<React.SetStateAction<string[]>>
+    loading: boolean,
+    setLoading: React.Dispatch<React.SetStateAction<boolean>>
+    pause: boolean,
+    setPause: React.Dispatch<React.SetStateAction<boolean>>
+}>({
+    curr: -1,
+    setCurr: () => {},
+    data: {},
+    setData: () => {},
+    list: [],
+    remaining: [],
+    setRemaining: () => {},
+    loading: false,
+    setLoading: () => {},
+    pause: false,
+    setPause: () => {},
+})
+
+function Cell({l,r}: CellProps) {
+    const cells = useContext(CellsCtx);
+    const curr = cells.data[`${l}-${r}`];
+    return <td 
+        className={tdClass}
+    >
+        {
+            curr === undefined || isNaN(curr)
+            ? (
+                cells.curr !== -1 && !cells.loading
+                ? <m.div
+                        className={cellStyle}
+                        style={{ opacity: 0 }}
+                        initial={{ opacity: 0 }}
+                        whileHover={{ opacity: 0.75 }}
+                        onClick={() => {
+                            if (cells.curr !== -1){
+                                cells.setData({
+                                    ...cells.data,
+                                    [`${l}-${r}`]: cells.curr
+                                })
+                                cells.setPause(true)
+                                
+                            }
+                        }}
+                    >
+                        {cells.list[cells.curr]}
+                  </m.div>
+                : <m.div
+                    className={cellStyle}
+                    style={{ cursor: "default" }}>
+                    &nbsp;
+                </m.div>
+                )
+            : <m.div
+                className={cellStyle}
+                style={{ cursor: "default" }}
+                initial={{ opacity: 1 }}
+              >
+                {cells.list[curr]}
+            </m.div>
+        }
+    </td>
+}
+
+function objToArr(l: number, r: number, obj: Record<string, number>) {
+    const ret: number[][] = Array(l).fill(0).map(() => Array(r).fill(""));
+    for (let i = 0; i < l; i++) {
+        for (let j = 0; j < r; j++) {
+            ret[i][j] = obj[`${i}-${j}`] ?? NaN;
+        }
+    }
+    return ret
+}
+
+function arrToObj(l: number, r: number, arr: number[][]) {
+    const ret: Record<string, number> = {};
+    for (let i = 0; i < l; i++) {
+        for (let j = 0; j < r; j++) {
+            ret[`${i}-${j}`] = arr[i][j];
+        }
+    }
+    return ret
+}
+
+// function easeInOutQuad(t: number, b: number, c: number, d: number) {
+//     if ((t /= d / 2) < 1) return c / 2 * t * t + b;
+//     return -c / 2 * ((--t) * (t - 2) - 1) + b;
+// }
+
+// function easeOutQuad(t: number, b: number, c: number, d: number) {
+// return -c * (t /= d) * (t - 2) + b;
+// }
+
+// function easeInQuad(t: number, b: number, c: number, d: number) {
+// return c * (t /= d) * t + b;
+// }
+
+export default function Chooser() {
+    const { hash } = useLocation();
+    const ctx = useGlobalContext();
+    const [loaded, setLoaded] = useState(false)
+    const [loading, setLoading] = useState(false)
+    const [hide, setHide] = useState(false)
+    const [curr, setCurr] = useState(-1);
+    const [currText, setCurrText] = useState("");
+    const [pause, setPause] = useState(false);
+    // const [textElm, setTextElm] = useState(<h1>&nbsp;</h1>);
+    const [data, setData] = useState<Record<string, number>>({});
+    const result = useMemo(() => fromURL(hash.substring(3)), [hash]);
+    const [remaining, setRemaining] = useState<string[]>([...result?.list ?? []]);
+    const navigate = useNavigate();
+    useEffect(() => {
+        ctx.setTitle("League");
+    })
+    // useEffect(() => {
+    //     setTextElm(<m.h1
+    //         initial={{ opacity: 0 }}
+    //         animate={{ opacity: 1 }}
+    //         exit={{ opacity: 0 }}
+    //     >{result?.list[curr]}</m.h1>)
+    // }, [curr, result?.list])
+    useEffect(() => {
+        if (!loaded) {
+            setRemaining((remaining) => {
+                if(result?.type === "result") {
+                    const d = arrToObj(result?.leagues ?? 0, result?.places ?? 0, result?.names ?? [])
+                    setData(d)
+                    const l = Object.values(d)
+                    const c = result?.curr ?? -1
+                    setCurr(c)
+                    if (c === -1) {
+                        // setRemaining((remaining) => {
+                            const r = shuffle(remaining.filter((_,i) => !l.includes(i)))
+                            setCurr(result?.list.findIndex(x => x === r[0]) ?? -1)
+                            return r
+                        // })
+                    }else{
+                        setPause(Object.values(d).includes(c))
+                        console.log(Object.values(d).includes(c))
+                        // setRemaining((remaining) => {
+                            const r = remaining.filter((x) => !l.includes(result.list.findIndex(v => v === x)) && x !== result.list[c])
+                            console.log(r)
+                            // setCurr(result?.list.findIndex(x => x === r[0]) ?? -1)
+                            return [result?.list[c],...r]
+                        // })
+                    }
+                }else{
+                    // setRemaining((remaining) => {
+                        const r = shuffle(remaining)
+                        setCurr(result?.list.findIndex(x => x === r[0]) ?? -1)
+                        return r
+                    // })
+                }
+            })
+            setLoaded(true)
+        } else {
+            const url = `#!P${toURL({
+                type: "result",
+                leagues: result?.leagues ?? 0,
+                places: result?.places ?? 0,
+                curr,
+                list: result?.list ?? [],
+                names: objToArr(result?.leagues ?? 0, result?.places ?? 0, data)
+            })}`
+            if (hash !== url) {
+                navigate(url, {
+                    replace: true
+                })
+            }
+        }
+    }, [data,curr])
+    useEffect(() => {
+        let i = -1
+        const max = Math.min(25, remaining.length)
+        const ani = animate(0, max, {
+            duration: 5,
+            ease: "easeInOut",
+            repeat: 0,
+            onUpdate: (v) => {
+                const n = Math.round(v)
+                setLoading(true)
+                if(i !== n) {
+                    setHide(true)
+                    i = n
+                    const index = (remaining.length < 25 ? remaining.length : 25) - n
+                    console.log(index)
+                    setCurrText(remaining[index] ?? currText)
+                    setHide(false)
+                }
+            },
+            onComplete: () => {
+                setHide(false)
+                setLoading(false)
+            }
+        })
+        setLoading(true)
+        ani.play()
+        if(pause) ani.complete()
+        return () => {
+            ani.complete()
+        }
+    }, [remaining])
+    return (
+        <CellsCtx.Provider value={{
+            curr,
+            setCurr,
+            remaining,
+            setRemaining,
+            data,
+            setData,
+            list: result?.list ?? [],
+            loading : loading || pause,
+            setLoading,
+            pause,
+            setPause
+        }}>
+        <m.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+        >
+            <section
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                }}
+            >
+                <m.div
+                    style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: loading ? .5 : 1,
+                    }}
+                >
+                    <AnimatePresence>
+                        {hide ? <h1>&nbsp;</h1> : <h1>{currText}</h1>}
+                    </AnimatePresence>
+                    {/* <h1 style={{
+                    }}> */}
+                        {/* <Reorder.Group values={remaining} onReorder={setRemaining}>
+                        {remaining.map(item => (
+                            <Reorder.Item key={item} value={item}>
+                            {item}
+                            </Reorder.Item>
+                        ))}
+                        </Reorder.Group> */}
+                        {/* <ul style={{
+                            listStyle: "none",
+                        }}>
+                            {[...remaining].reverse().map((x, i) => (
+                                <li key={i}>{x}</li>
+                            ))}
+                        </ul> */}
+                        {/* {result?.list?.[curr] ?? <>&nbsp;</>} */}
+                    {/* </h1> */}
+                    <m.button className="contained" style={{
+                        display: "flex",
+                        gap: "1rem",
+                    }}
+                    disabled={loading}
+                    onClick={() => {
+                        setRemaining((remaining) => {
+                            const rem = remaining.filter(x => x !== result?.list[curr])
+                            setPause(false)
+                            const r = shuffle(rem)
+                            setCurr(result?.list.findIndex(x => x === r[0]) ?? -1)
+                            return r
+                        })
+                    }}>Pick Another Name <Shuffle size={16} /></m.button>
+                </m.div>
+            </section>
+            <div style={{
+                overflow: "auto",
+            }}>
+                <table className={`dataTable ${tableClass}`}>
+                    <thead>
+                        <tr style={{
+                            
+                        }}>
+                        {Array(result?.leagues ?? []).fill(0).map((_, i) => (
+                                <th key={i}>League {i + 1}</th>
+                        ))}
+                        </tr>  
+                    </thead>
+                    <tbody>
+                        {Array(result?.places ?? []).fill(0).map((_, i) => (
+                            <tr key={i}>
+                                {Array(result?.leagues ?? []).fill(0).map((_, j) => (
+                                    <Cell key={`${i}-${j}`} l={i} r={j} />
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div> 
+        </m.div>
+        </CellsCtx.Provider>
+    )
+}

@@ -1,0 +1,124 @@
+button,
+input[type=button],
+input[type=submit],
+.button {
+    color: var(--text2);
+    background: transparent;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--text1);
+    }
+
+    &.outlined {
+        &:hover {
+            border: 1px solid var(--text1);
+        }
+
+        border: 1px solid var(--text2);
+        transition: border-color .5s,
+        color .5s;
+    }
+
+    &.contained {
+        background-color: var(--btn);
+        color: var(--btn-text);
+
+        &:hover {
+            background-color: var(--btn-hover);
+        }
+
+        transition: background-color .5s;
+    }
+}
+
+.dataTable-container {
+    width: 100%;
+    overflow: auto;
+    // border: 1px solid;
+}
+
+.dataTable {
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 0.9em;
+    font-family: sans-serif;
+    min-width: 100%;
+    max-width: 100%;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+    thead {
+        tr {
+            background-color: #00879e;
+            color: #ffffff;
+            text-align: left;
+        }
+    }
+    th,
+    td {
+        padding: 12px 15px;
+        overflow: auto;
+        white-space: pre-line;
+    }
+    tbody{
+        tr {
+            border-bottom: 1px solid #dddddd;
+            td:nth-of-type(2){
+                overflow-wrap: anywhere;
+            }
+        }
+
+        tr:nth-of-type(even) {
+            background-color: #f3f3f32a;
+        }
+        
+    } 
+    
+    td {
+        border: 1px solid;
+    }
+}
+
+.modal {
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    // overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+.modal-content {
+    margin: 15% auto;
+    padding: 20px;
+    width: 80%; 
+    height: 100%;
+    .card {
+        height: 100%;
+        width: 100%;
+    }
+}
+
+.overlay {
+    position: fixed; /* Sit on top */
+    z-index: 1; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+    .loader {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100px;
+        height: 100px;
+    }
+}
